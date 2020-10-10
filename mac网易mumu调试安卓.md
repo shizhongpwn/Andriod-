@@ -62,6 +62,10 @@ ida连接：
 
 方案二：
 
+adb forward tcp:23946 tcp:23946  
+
+进行端口转发
+
 把192.168.1.102（你的ip）改为localhost
 
 方案三：
