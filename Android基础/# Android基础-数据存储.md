@@ -19,7 +19,7 @@ Android系统中主要提供了三种方式用于实现数据持久化存储
         FileOutputStream out = null;
         BufferedWriter writer = null;
         try {
-            out = openFileOutput("data", Context.MODE_PRIVATE);
+            out = openFileOutput("data", Context.MODE_PRIVATE); //默认的操作模式，表示该文件存在的话就进行覆盖写。
             writer = new BufferedWriter(new OutputStreamWriter(out));
             writer.write(data);
 
@@ -77,5 +77,107 @@ java和android还是有区别的，我用平常IO读文件的方法可能是需�
 
 * EditText的setSelection()方法，移动光标到指定的位置。
 
+# SharedPreferences
 
+文件存储位置：
+
+![image-20201027183200787](# Android基础-数据存储.assets/image-20201027183200787.png)
+
+目录下的。
+
+获取SharedPreferences对象：
+
+* Context 类getSharedPreferences()方法
+
+~~~java
+ public void onClick(View v) {
+                SharedPreferences.Editor editor = getSharedPreferences("data",MODE_PRIVATE).edit();
+                editor.putString("name","tom");
+                editor.putInt("age",28);
+                editor.putBoolean("married",false);
+                editor.apply();
+            }
+~~~
+
+我们以一个onclick事件来测试，这会生成一个xml文件，可以看到里面存储的有我们的数据。	
+
+* Activity类里面的getPreferences()方法
+
+它只接受一个操作模式参数，因为使用这个方法时会自动将当前活动的类名作为SharedPreferences的文件名。
+
+* PreferenceManager 类里面的getDefaultSharedPreferences()方法。
+
+这个是一个静态方法，它接受一个Context参数，并自动使用当前应用的包名作为前缀来命名文件。
+
+`从SharedPreferences`里面读取数据：
+
+`SharedPreferences对象`里面提供了一系列的get方法帮助读取数据，每种方法对应着一个SharedPreferences.Editor里面的一种put方法（参见上述代码），这些get方法都接受两个参数，一个是put传入的键值对里面的键，第二个参数是默认值，表示当传入的键找不到对应的值得时候会以怎么样的默认值进行返回。
+
+~~~java
+ public void onClick(View v) {
+                SharedPreferences sharedPreferences = getSharedPreferences("data",MODE_PRIVATE);
+                String name = sharedPreferences.getString("name","");
+                int age = sharedPreferences.getInt("age",0);
+                Log.d("MainActivity","name is "+name);
+                Log.d("MainActivity","name is "+age);
+            }
+~~~
+
+### 记住密码
+
+这里实现一个记住密码的功能来帮助理解这一个存储的方式：
+
+~~~java
+ protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        editText = (EditText)findViewById(R.id.username);
+        passwordText = (EditText)findViewById(R.id.password);
+        checkBox = (CheckBox) findViewById(R.id.checkBox);
+        boolean isRemeber = sharedPreferences.getBoolean("remember_password",false);
+        if(isRemeber){
+            String username = sharedPreferences.getString("username","");
+            String passwd = sharedPreferences.getString("passwd","");
+            editText.setText(username);
+            passwordText.setText(passwd);
+            checkBox.setChecked(true);
+        }
+        Button button = (Button)findViewById(R.id.button);
+        Button button1 = (Button)findViewById(R.id.button2);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String username = editText.getText().toString();
+                String passwd = passwordText.getText().toString();
+                if(username.equals("admin") && passwd.equals("123456")){
+                    editor = sharedPreferences.edit();
+                    if(checkBox.isChecked()){
+                        editor.putBoolean("remember_password",true);
+                        editor.putString("username",username);
+                        editor.putString("passwd",passwd);
+                        Toast.makeText(MainActivity.this,"存储成功",Toast.LENGTH_LONG);
+                    }
+                    else {
+                        editor.clear();
+                    }
+                }
+                else {
+                    Toast.makeText(MainActivity.this,"登陆错误",Toast.LENGTH_LONG);
+                }
+                editor.apply();
+            }
+        });
+        button1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                SharedPreferences sharedPreferences = getSharedPreferences("com.example.sharedpreferencestest_preferences",MODE_PRIVATE);
+                String name = sharedPreferences.getString("username","");
+                int age = sharedPreferences.getInt("age",0);
+                Log.d("MainActivity","name is"+name);
+                Log.d("MainActivity","name is"+age);
+            }
+        });
+    }
+~~~
 
