@@ -148,6 +148,51 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 通过`NotificationManager`自带的cancel方法，通过相关`ID`来关闭通知栏。
 
+`通知的进阶技巧`
+
+说一些API吧
+
+~~~
+.setSound() //通知声音
+.setVibreate() //通知震动,需要 VIBRATE 权限
+.setLights() // 通知LED 闪烁
+.setDefaults() // 默认设置
+~~~
+
+`通知的高级功能`
+
+~~~java
+.setStyle(new NotificationCompat.BigTextStyle().bigText("good"))//方法可以构造出丰富文本的通知内容
+//也可以用来显示一个大图片
+.setStyle(new NotificationCompat.BigPictureSyle().bigPicture(BitmapFactory.decodeResource(getResources(),R.drawable.big_image))).build();
+~~~
+
+~~~java
+.setPriority() //用于设置通知的重要程度
+~~~
+
+参数如下：
+
+* `PRIORITY_DEFAULT` 默认
+* `PRIORITY_MIN` 最低重要程度，只有在特定场景下才会显示这个通知。
+* `PRIORITY_LOW` 较低的通知程度，系统可能会将此类通知缩小，或者改变其显示的顺序。
+* `PRIORITY_HIGH` 较高的通知程度，系统可能会将此类通知放大，或者将其放在前面的位置。
+* `PRIORITY_MAX` 较高的通知程序，必须立刻让用户看到。
+
+~~~java
+.setPriority(NotificationCompat.PRIORITY_MAX);
+~~~
+
+`调用摄像头`
+
+
+
+
+
+
+
+
+
 
 
 
