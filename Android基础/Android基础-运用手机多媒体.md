@@ -185,7 +185,97 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 `调用摄像头`
 
+~~~java
+package com.example.cameraalbumtest;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
+
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.Image;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.provider.MediaStore;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
+
+import java.io.File;
+import java.io.IOException;
+
+public class MainActivity extends AppCompatActivity {
+    public static final int TAKE_PHOTO = 1;
+    private ImageView picture;
+    private Uri imageUri;
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        Button takePhoto = (Button)findViewById(R.id.button2);
+        picture = (ImageView)findViewById(R.id.imageView);
+        takePhoto.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                File outputImage = new File(getExternalCacheDir(),"output_image.jpg");
+                //创建FILE对象，用于存储照片。
+              
+                try {
+                    if(outputImage.exists()){
+                        outputImage.delete();
+                    }
+                    outputImage.createNewFile();
+                }catch (IOException e){
+                    e.printStackTrace();
+                }
+                if(Build.VERSION.SDK_INT>=24){
+                    imageUri = FileProvider.getUriForFile(MainActivity.this,"com.example.cameraalbumtest.fileprovider",outputImage);
+                }
+                else {
+                    imageUri = Uri.fromFile(outputImage);
+                }
+                //启动相机
+                Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
+                intent.putExtra(MediaStore.EXTRA_OUTPUT,imageUri); //隐式的Intent，系统会找出能够响应这个Intent的活动去启动
+                startActivityForResult(intent,TAKE_PHOTO);
+            }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case TAKE_PHOTO:
+                if (resultCode == RESULT_OK) {
+                    try {
+                        Bitmap bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
+                        picture.setImageBitmap(bitmap);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+    }
+}
+~~~
+
+* `getExternalCacheDir()`方法可以得到手机SD卡的应用关联目录（就是指SD卡中专门用于存放当前应用缓存数据的位置。）
+  * 其具体路径`/sdcard/Android/data/<package name>/cache`
+  * 为什么用`应用关联目录`？
+    * 从`Andorid6.0`开始，读写`SD`卡被视为危险权限，如果图片放在SD卡的任何其他目录，都要进行运行时的权限处理，用关联目录可以跳过这一步。
+* 系统版本低于`Android7.0`的话，就直接用`Uri`的`fromFile()`方法进行对象转换。
+  * 高于的话，`getUriForFile()`方法将File对象转换成一个封装过的`Uri`对象。
+  * `Android7.0`开始，直接用本地真实路径被认为不安全，`FileProvider`是一种特殊的内容提供器，对数据进行保护，选择性的将封装过的`Uri`共享给外部。
+* `Intent`的`putExtra()`方法用来指定图片的输出地址。
 
 
 
