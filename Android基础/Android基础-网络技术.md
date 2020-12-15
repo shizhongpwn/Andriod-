@@ -142,6 +142,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 这是一个开源项目：`https://github.com/square/okhttp`
 
+MAC上新版Android stduio 的加载方式还不太一样呢。。。
+
+> file -> project Structure
+
+![image-20201215185754314](Android基础-网络技术.assets/image-20201215185754314.png)
+
+ 使用该库的话，我们可以把关键函数修改为如下：
+
+~~~java
+    private void sendRequestWithHttpURLConnection(){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    OkHttpClient client = new OkHttpClient();
+                    Request request = new Request.Builder().url("https://www.baidu.com").build();
+                    Response response = client.newCall(request).execute();
+                    String responseData = response.body().string();
+                    showRequest(responseData);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+~~~
+
+不得不说，简单很多。
+
 
 
 
