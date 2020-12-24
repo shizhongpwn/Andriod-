@@ -171,6 +171,305 @@ MAC上新版Android stduio 的加载方式还不太一样呢。。。
 
 不得不说，简单很多。
 
+那么它如何实现`POST`请求：
+
+~~~java
+    private void sendRequestWithHttpURLConnection(){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    OkHttpClient client = new OkHttpClient();
+                    RequestBody requestBody = new FormBody.Builder()
+                            .add("username","admin")
+                            .add("password","word")
+                            .build();
+                    Request request = new Request.Builder().url("https://www.baidu.com").post(requestBody).build();
+                    Response response = client.newCall(request).execute();
+                    String responseData = response.body().string();
+                    showRequest(responseData);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+~~~
+
+最大的区别就是加上了一个`RequestBody`来帮助我们实现数据传送。
+
+## 解析XML格式数据
+
+~~~java
+    private void paresXMLWithPull(String xmlData){
+        try {
+            XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+            XmlPullParser xmlPullParser = factory.newPullParser();
+            xmlPullParser.setInput(new StringReader(xmlData));
+            int eventType = xmlPullParser.getEventType();
+            String id = "";
+            String name = "";
+            String version = "";
+            while (eventType != xmlPullParser.END_DOCUMENT){
+                String nodeName = xmlPullParser.getName();
+                switch (eventType){
+                    case XmlPullParser.START_TAG:
+                        if("id".equals(nodeName)){
+                            id = xmlPullParser.nextText();
+                        }else if ("name".equals(nodeName)){
+                            name = xmlPullParser.nextText();
+                        }else if ("versiong".equals(nodeName)){
+                            version = xmlPullParser.nextText();
+                        }
+                        break;
+                    case XmlPullParser.END_TAG:
+                        if("app".equals(nodeName)){
+                            Log.d("MainActivity","id is " + id);
+                            Log.d("MainActivity","name is " + name);
+                            Log.d("MainActivity","version is " + version);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                eventType = xmlPullParser.next();
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+~~~
+
+解析过程：
+
+1. 创建`XmlPullParserFactory`实例
+2. 从实例中获取`XmlPullParser`对象
+3. 利用对象的`setInput`方法将服务器返回的XML数据设置进去开始解析。
+
+我们发现此时好似并没有解析成功，调试发现是在发送http请求的时候出现失败，搜索之后发现因为Andrroid 9之后不再支持http协议，因而必须使用https协议。
+
+`SAX解析方式`
+
+~~~java
+package com.example.networdtest;
+
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
+
+public class Myhandle extends DefaultHandler {
+    @Override
+    public void startDocument() throws SAXException {
+
+    }
+
+    @Override
+    public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+
+    }
+
+    @Override
+    public void characters(char[] ch, int start, int length) throws SAXException {
+
+    }
+
+    @Override
+    public void endElement(String uri, String localName, String qName) throws SAXException {
+
+    }
+
+    @Override
+    public void endDocument() throws SAXException {
+        
+    }
+}
+~~~
+
+新建一个`Myhandle`类继承于`DefaultHandler`类，实现其中5个方法：
+
+* `startDocument()`方法会在开始XML解析的时候调用。
+* `startElement`方法会在解析某个节点的时候调用。
+* `characters`方法会在获取节点中的内容的时候调用。
+* `endElement`方法会在完成解析某个节点的时候调用。
+* `endDocument()`方法会在完成整个`XML`解析的时候调用。
+
+完善功能后如下：
+
+~~~java
+package com.example.networdtest;
+
+import android.util.Log;
+
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
+
+public class Myhandle extends DefaultHandler {
+    private String nodeName;
+    private StringBuilder id;
+    private StringBuilder name;
+    private StringBuilder version;
+
+    @Override
+    public void startDocument() throws SAXException {
+        id = new StringBuilder();
+        name = new StringBuilder();
+        version = new StringBuilder();
+    }
+
+    @Override
+    public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        nodeName = localName;
+    }
+
+    @Override
+    public void characters(char[] ch, int start, int length) throws SAXException {
+        if("id".equals(nodeName)){
+            id.append(ch,start,length);
+        }
+        else if ("name".equals(nodeName)){
+            name.append(ch,start,length);
+        }
+        else if("version".equals(nodeName)){
+            version.append(ch,start,length);
+        }
+    }
+
+    @Override
+    public void endElement(String uri, String localName, String qName) throws SAXException {
+        if("app".equals(localName)){
+            Log.d("Myhandle","id is " + id.toString().trim());
+            Log.d("Myhandle","name is " + name.toString().trim());
+            Log.d("Myhandle","version is" + version.toString().trim());
+            id.setLength(0);
+            name.setLength(0);
+            version.setLength(0);
+        }
+    }
+
+    @Override
+    public void endDocument() throws SAXException {
+        super.endDocument();
+    }
+}
+~~~
+
+创建好了类，那么我们该如何进行使用呢？在`MainActivity`里面实现如下方法
+
+~~~java
+    private void paresXMLWithSAX(String xmlData){
+        try {
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            XMLReader xmlReader = factory.newSAXParser().getXMLReader();
+            Myhandle handler = new Myhandle();
+            xmlReader.setContentHandler(handler);
+            xmlReader.parse(new InputSource(new StringReader(xmlData)));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+~~~
+
+那么我们就可以把第一个`pull`处理数据的方法替换成该方法。
+
+## 解析JSON格式的数据
+
+JSON格式和XML格式相比，其优点在于在网络传输的过程中可以节省流量，但是缺点在于其语义性较差，在直观性上差于XML.
+
+解析方式：
+
+* 官方提供的`JSONObject`
+
+  * ~~~java
+        private void paresJSONWithJSONObject(String jsonData){
+            try {
+                JSONArray jsonArray = new JSONArray(jsonData);
+                for (int i=0;i<jsonArray.length();i++){
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    String id = jsonObject.getString("id");
+                    String name = jsonObject.getString("name");
+                    String version = jsonObject.getString("version");
+                    Log.d("MainActivity","id is " + id.toString());
+                    Log.d("MainActivity","name is " + name);
+                    Log.d("MainActivity","version is " + version);
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+    ~~~
+
+* 谷歌开源GSON库。
+
+  * `com.google.code.gson:gson:2.7`(有新版的，但是我为了测试等原因用的老版本库)
+
+  * 如果只是解析单个数据的话
+
+  * ~~~java
+    Gson gson = new Gson();
+    Person person = gson.fromJson(jsonData,Person.class)
+    ~~~
+
+  `{"name":"Tom","age":20}`,我们可以定义一个`Person`类，简单的调用上述代码就可以完成解析，但是如果是一个`json`格式的数组的话，就要用下面的这个特殊方式。
+
+  * ~~~java
+        private void paresJSONWithGSON(String jsonData){
+            Gson gson = new Gson();
+            List<app> appList = gson.fromJson(jsonData,new TypeToken<List<app>>(){}.getType());
+            for (app app1 : appList){
+                Log.d("MainActivity","id is " + app1.getId());
+                Log.d("MainActivity","name is " + app1.getName());
+                Log.d("MainActivity","version is " + app1.getVersion());
+            }
+        }
+    ~~~
+
+  * ~~~java
+    package com.example.networdtest;
+    
+    public class app {
+        private String id;
+        private String name;
+        private String version;
+        public String getId(){
+            return id;
+        }
+        public String getName(){
+            return name;
+        }
+        public String getVersion(){
+            return version;
+        }
+        public void setId(String id){
+            this.id = id;
+        }
+        public void setName(String name){
+            this.name = name;
+        }
+        public void setVersion(String version){
+            this.version = version;
+        }
+    }
+    ~~~
+
+* 其他第三方开源库
+
+## 网络编程实践
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
