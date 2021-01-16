@@ -456,6 +456,74 @@ JSON格式和XML格式相比，其优点在于在网络传输的过程中可以�
 
 ## 网络编程实践
 
+~~~java
+package com.example.networdtest;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+public class Httputil {
+    public static String sendHttpRequest(String address){
+        HttpURLConnection connection = null ;
+        try{
+            URL url = new URL(address);
+            connection = (HttpURLConnection)url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(8000);
+            connection.setReadTimeout(8000);
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+            InputStream in = connection.getInputStream();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            StringBuilder stringBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine())!=null){
+                    stringBuilder.append(line);
+            }
+            return stringBuilder.toString();
+        }catch (Exception e){
+            e.printStackTrace();
+            return e.getMessage();
+        }
+        finally {
+            if(connection!=null){
+                connection.disconnect();
+            }
+        }
+    }
+}
+~~~
+
+网络请求通常都是耗时操作，所以`sendHttpRequest`方法可能阻塞主线程，同时我们不可以简单把发起请求放在线程里面，因为服务器响应的数据是没有办法进行返回的，所有的耗时逻辑都在线程里面进行吗，`sendHttpRequest()`方法会在服务器没来得及响应的时候就执行结束，当然就没办法返回响应的数据。
+
+`利用JAVA的回调机制`
+
+~~~java
+    public static void sendOkHttpRequest(String address, okhttp3.Callback callback){
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder()
+                .url(address)
+                .build();
+        client.newCall(request).enqueue(callback);
+    }
+~~~
+
+* `okhttp3.Callback`是`OkHttp`库里面自带的一个回调接口。
+* `newCall`之后没有调用`execute()`方法，而是调用了一个`enqueue()`方法，并且把`okhttp3.Callback`参数传入。
+
+![image-20210116204508219](Android基础-网络技术.assets/image-20210116204508219.png)
+
+
+
+
+
+
+
+
+
 
 
 
