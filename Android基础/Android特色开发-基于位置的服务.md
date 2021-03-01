@@ -89,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
     }
     private void requestLocation(){
         locationClient.start();
-    } //定位开始
+    } //定位开始，定位的结果会回调到我们前面注册的监听器里面去。
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -130,4 +130,206 @@ public class MainActivity extends AppCompatActivity {
 ~~~
 
 到此为止，就完成了最基础的定位服务。
+
+但是上面值进行了一次的定位，当位置移动的时候无法获得持续的定位结果，为了实现持续定位，只需要修改一个方法，增加两个方法：
+
+~~~java
+    private void requestLocation(){
+        initLocation();
+        locationClient.start();
+    }
+    private void initLocation(){
+        LocationClientOption option = new LocationClientOption();//听名字就知道是设置LocationClient的属性的
+        option.setScanSpan(5000); //定位时间间隔设置为5000毫秒，表示5秒进行一次定位
+        locationClient.setLocOption(option);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        locationClient.stop(); //因为定义了重复定位，所以在程序销毁的时候要记得关闭定位功能，否则程序会在后台不断的持续定位。
+    }
+~~~
+
+LBS SDK一共只有三种模式可以选择：
+
+* Hight_Accuracy  高精度
+* Battery_Saving  节电模式
+* Device_Sensors  传感器模式，只会使用GPS进行定位
+
+可以通过LocationClientOption来设置模式：
+
+~~~java
+    private void initLocation(){
+        LocationClientOption option = new LocationClientOption();//听名字就知道是设置LocationClient的属性的
+        option.setScanSpan(5000); //定位时间间隔设置为5000毫秒，表示5秒进行一次定位
+        option.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy);
+        locationClient.setLocOption(option);
+    }
+
+~~~
+
+`如何看懂位置信息`
+
+~~~java
+    private void initLocation(){
+        LocationClientOption option = new LocationClientOption();//听名字就知道是设置LocationClient的属性的
+        option.setScanSpan(5000); //定位时间间隔设置为5000毫秒，表示5秒进行一次定位
+        //option.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy);
+        option.setIsNeedAddress(true);//设置打开详细的地址信息
+        locationClient.setLocOption(option);
+    }
+
+~~~
+
+~~~java
+ public class MyLocationListener implements BDLocationListener{
+        @Override
+        public void onReceiveLocation(BDLocation bdLocation) {
+            StringBuilder currentPosition = new StringBuilder();
+            currentPosition.append("纬度：").append(bdLocation.getLatitude()).append("\n");//这里就可以直接利用jar包获得定位信息了
+            currentPosition.append("经线：").append(bdLocation.getLongitude()).append("\n");
+            currentPosition.append("国家：").append(bdLocation.getCountry());
+            currentPosition.append("省：").append(bdLocation.getProvince());
+            currentPosition.append("城市：").append(bdLocation.getCity()).append("\n");
+            currentPosition.append("区：").append(bdLocation.getDistrict()).append("\n");
+            currentPosition.append("街道：").append(bdLocation.getStreet()).append("\n");
+            currentPosition.append("定位方式：");
+            if(bdLocation.getLocType()== BDLocation.TypeGpsLocation){//判断定位类型GPS，还是网络定位
+                currentPosition.append("GPS");
+            }else if (bdLocation.getLocType()== BDLocation.TypeNetWorkLocation){
+                currentPosition.append("网络");
+            }else if(bdLocation.getLocType()== BDLocation.TypeServerError) //模拟器一般都返回这个,tmd百度SDK api文档也没查到什么有用的信息，服务关了还能获得定位信息
+            {
+                currentPosition.append("服务未开启");
+            }
+            textView.setText(currentPosition);
+        }
+    }
+~~~
+
+## 使用百度地图
+
+~~~xml
+    <com.baidu.mapapi.map.MapView
+        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:id="@+id/bmapView"
+        android:clickable="true"
+        />
+~~~
+
+~~~java
+    private MapView mapView;
+    ....
+        protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        SDKInitializer.initialize(getApplicationContext()); //SDK地图初始化，但是这个需要在serContentView之前进行调用
+        setContentView(R.layout.activity_main);
+        mapView = (MapView)findViewById(R.id.bmapView);
+        ......
+         @Override
+    protected void onResume() {//onResume方法是Activity第一次创建时 重新加载实例时调用 例如 我打开App搜索第一个界面OnCreate完 就调用onResume 然后切换到下一个界面 第一个界面不finish 按Back键回来时 就调onResume 不调onCreate， 还有就是 App用到一半 有事Home键切出去了 在回来时调onResume ，在这里调用该方法的时候，恢复地图的运行
+        super.onResume();
+        mapView.onResume();
+    }
+
+    @Override
+    protected void onPause() {//当该activity被其他事件中断，或者被暂停的时候，通过该方法停止地图的调用。
+        super.onPause();
+        mapView.onPause();
+    }
+~~~
+
+`地图移动到我的位置`
+
+LBS SDK里面提供了一个BaiduMap，它是地图的总控制器
+
+* getMap方法可以获得BaiduMap的实例
+
+百度地图的缩放级别在3-19之间，小数点也可取，值越大，地图显示的信息越精细。
+
+那么首先我们要获取一个地图的实例：
+
+~~~java
+    private BaiduMap baiduMap;
+    private boolean isFirstLocate = true;
+    ......
+        @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        SDKInitializer.initialize(getApplicationContext()); //SDK地图初始化，但是这个需要在serContentView之前进行调用
+        setContentView(R.layout.activity_main);
+        mapView = (MapView)findViewById(R.id.bmapView);
+        baiduMap = mapView.getMap();//获取地图的实例
+~~~
+
+然后通过该实例实现一个位置转换方法
+
+~~~java
+    private void navigateTo(BDLocation location)
+    {
+        if(isFirstLocate){
+            LatLng ll = new LatLng(location.getLatitude(),location.getLongitude());
+            MapStatusUpdate update = MapStatusUpdateFactory.newLatLng(ll);
+            baiduMap.animateMapStatus(update);//将地图移动到指定的经纬度上面。
+            update = MapStatusUpdateFactory.zoomTo(16f);//zoomTo方法接受一个float类型的参数用来设置缩放级别
+            baiduMap.animateMapStatus(update);//更新缩放级别
+            isFirstLocate = false;
+        }
+    }
+~~~
+
+LatLng类主要就是用来存放经纬度的值的，它的构造方法接受两个参数，第一个参数是纬度值，第二个参数是经度值，之后调用MapStatusUpdateFactory的newLatLng()方法将LatLng对象传入，newLatLng方法返回的也是一个MapStatusUpdate对象。
+
+`让我显示在地图上`
+
+百度LSB SDK提供了一个MyLocationData.Builder类，这个类用来封装设备当前的所在位置，只需要将经纬度信息传入到这个类的相应的方法里面就可以了。
+
+传入之后利用build方法可以生成该类的实例。
+
+修改之前移动地图位置的方法：
+
+~~~java
+    private void navigateTo(BDLocation location)//实现地图的位置移动
+    {
+        if(isFirstLocate){
+            LatLng ll = new LatLng(location.getLatitude(),location.getLongitude());
+            MapStatusUpdate update = MapStatusUpdateFactory.newLatLng(ll);
+            baiduMap.animateMapStatus(update);
+            update = MapStatusUpdateFactory.zoomTo(16f);
+            baiduMap.animateMapStatus(update);
+            isFirstLocate = false;
+        }
+        MyLocationData.Builder locationData = new MyLocationData.Builder();
+        locationData.latitude(location.getLatitude());
+        locationData.longitude(location.getLongitude());
+        MyLocationData myLocationData = locationData.build();
+        baiduMap.setMyLocationData(myLocationData);
+    }
+~~~
+
+可以看到我们构建了一个MyLocationData的实例，并将其设置到了BaiduMap里面，**到这里其实才明白isFirstLocate的存在其实是因为打开地图的时候把地图移动到机器这里只需要一次，但是因为之后的不断定位其实不用每次都移动到指定的经纬度上面**。
+
+但是使用此功能我们必须使用BaiduMap的setMyLocationEnabled()方法打开此功能，这是由于百度地图SDK的限制。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
