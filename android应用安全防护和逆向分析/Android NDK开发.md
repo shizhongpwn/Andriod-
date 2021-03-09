@@ -1,4 +1,4 @@
-# Android NDK开发
+# Android-NDK开发
 
 > 大致一看目录，书的版本有点老，写的又老又菜，直接android开发官网手册整起来。
 >
@@ -68,7 +68,7 @@ jobject参数 ojb
 * 如果native方法不是static,obj就代表native方法。
 * 如果native方法是static，obj就是代表native方法的类的class对象实例（static方法不需要类实例的，所以就代表这个类的class对象）
 
-![image-20210305082031099](Android NDK开发.assets/image-20210305082031099.png)
+![image-20210305082031099](Android-NDK开发.assets/image-20210305082031099.png)
 
 jclass类型
 
