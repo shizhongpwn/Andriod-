@@ -174,6 +174,55 @@ getprop
 
   root设备之后这个命令还可以修改相关信息
 
+## 操作apk命令
+
+aapt dump xmltree [apk包] [需要查看的资源文件xml]
+
+* aapt dump xmltree dmeo.apk AndroidManifest.xml
+
+dexdump [文件路径]
+
+## 进程命令
+
+> 跟linux一样
+
+cat /proc/[pid]/maps
+
+cat /proc/[pid]/status //查看进程状态
+
+
+
+cat /proc/[pid]/net/tcp/tcp6      /udp/udp6
+
+* 获取当前应用使用的端口号信息
+* 上面其实是4条命令
+
+
+
+
+
+> 我发下第三章，第四章都是linux基础内容，直接tmd跳过
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
